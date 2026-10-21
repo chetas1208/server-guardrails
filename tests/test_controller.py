@@ -32,7 +32,7 @@ def test_soft_resume_after_power_drops():
 
 def test_red_freezes_every_process_and_never_kills():
     c = Controller(Config())
-    acts = c.step(smp(p0=418), procs(), 0)  # > 95% of 420
+    acts = c.step(smp(p0=430), procs(), 0)  # a card above its own 420 W limit
     kinds = [a.kind for a in acts]
     assert c.mode == RED and kinds.count("FREEZE") == 3 and "MODE" in kinds
     assert not any(a.kind in ("KILL", "TERM") for a in acts)
@@ -53,7 +53,7 @@ def test_ram_over_red_triggers_red():
 def test_thaw_needs_cooldown_and_calm_then_is_staggered_oldest_first():
     cfg = Config(red_cooldown_s=10, calm_samples=3, thaw_spacing_s=8)
     c = Controller(cfg)
-    c.step(smp(p0=418), procs(), 0)
+    c.step(smp(p0=430), procs(), 0)
     calm = smp(p0=100, p1=100)
     for t in (1, 2, 3, 4):                       # calm but cooldown (10 s) not elapsed
         assert c.step(calm, [], t) == [] and c.mode == RED
@@ -71,23 +71,23 @@ def test_thaw_needs_cooldown_and_calm_then_is_staggered_oldest_first():
 def test_repeated_red_doubles_cooldown_and_is_capped():
     cfg = Config(red_cooldown_s=100, red_cooldown_max_s=250, calm_samples=1)
     c = Controller(cfg)
-    c.step(smp(p0=418), procs(), 0)
+    c.step(smp(p0=430), procs(), 0)
     assert c._cool == 100
     c.mode = THAW
-    c.step(smp(p0=418), procs(), 5)
+    c.step(smp(p0=430), procs(), 5)
     assert c._cool == 200
     c.mode = THAW
-    c.step(smp(p0=418), procs(), 6)
+    c.step(smp(p0=430), procs(), 6)
     assert c._cool == 250  # capped
 
 
 def test_red_during_thaw_refreezes():
     cfg = Config(red_cooldown_s=1, calm_samples=1, thaw_spacing_s=100)
     c = Controller(cfg)
-    c.step(smp(p0=418), procs(), 0)
+    c.step(smp(p0=430), procs(), 0)
     c.step(smp(), [], 2)
     assert c.mode == THAW
-    acts = c.step(smp(p0=419), [Proc(99, 5.0, 1.0, 0)], 3)
+    acts = c.step(smp(p0=435), [Proc(99, 5.0, 1.0, 0)], 3)
     assert c.mode == RED and any(a.kind == "FREEZE" and a.pid == 99 for a in acts)
 
 
@@ -109,3 +109,20 @@ def test_single_gpu_machine_soft_pauses_instead_of_red():
     s = Sample([Device(0, 330, 420, 60)], 10, 125, 1, 20)   # 78% of the limit: above soft (70%), below red (95%)
     acts = c.step(s, [Proc(1, 1.0, 2.0, 0)], 0)
     assert c.mode == GREEN and [a.kind for a in acts] == ["PAUSE"]
+
+
+def test_single_job_spiking_near_the_cap_does_not_trigger_red():
+    c = Controller(Config())
+    c.step(smp(p0=410), procs(), 0)  # 97.6% of the limit: normal for one heavy job; soft cap pauses it, no RED
+    assert c.mode == GREEN
+
+
+def test_escalation_is_forgiven_after_calm():
+    cfg = Config(red_cooldown_s=10, calm_samples=1, thaw_spacing_s=1, red_forgive_s=50)
+    c = Controller(cfg)
+    c.step(smp(p0=430), procs(), 0)
+    assert c.red_count == 1
+    c.step(smp(), [], 11); c.step(smp(), [], 12); c.step(smp(), [], 13); c.step(smp(), [], 14)
+    assert c.mode == GREEN
+    c.step(smp(), [], 200)  # calm GREEN for > red_forgive_s
+    assert c.red_count == 0

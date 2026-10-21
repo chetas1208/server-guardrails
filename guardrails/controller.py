@@ -131,8 +131,8 @@ class Controller:
                     acts.append(Action("MODE", None, "GREEN"))
             return acts
 
-        # GREEN: forgive old REDs after 30 quiet minutes
-        if self.red_count and now - self._last_red > 1800:
+        # GREEN: forgive old REDs after `red_forgive_s` of calm
+        if self.red_count and now - self._last_red > c.red_forgive_s:
             self.red_count = 0
 
         # soft caps per accelerator (duty-cycling): pause the youngest job above the soft cap, resume below the resume mark

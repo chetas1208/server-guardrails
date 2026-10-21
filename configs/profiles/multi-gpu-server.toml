@@ -1,8 +1,8 @@
 # 8-GPU training node: allow 2 jobs per GPU, tighter total-power line because the PSU budget is shared by many cards.
 gpu_power_soft_frac = 0.75
 gpu_power_resume_frac = 0.50
-gpu_power_red_frac = 0.99
-total_gpu_power_red_frac = 0.80
+gpu_power_red_frac = 1.02
+total_gpu_power_red_frac = 1.02
 ram_soft_frac = 0.60
 ram_resume_frac = 0.50
 ram_red_frac = 0.70

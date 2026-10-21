@@ -47,7 +47,7 @@ Replay a recorded trace without touching anything: `guardrails -c my.toml simula
 
 | Profile | For | Highlights |
 |---|---|---|
-| [`gpu-workstation`](configs/profiles/gpu-workstation.toml) | 1-4 GPUs, shared lab box | 70% soft cap, RED at 99% / 76% total, 1 job per GPU, 4 CPU jobs |
+| [`gpu-workstation`](configs/profiles/gpu-workstation.toml) | 1-4 GPUs, shared lab box | 70% soft cap, RED on summed power / temperature / RAM, 1 job per GPU, 4 CPU jobs |
 | [`multi-gpu-server`](configs/profiles/multi-gpu-server.toml) | 8-GPU training node | 2 jobs per GPU, 80% total-power line, 16 CPU slots |
 | [`cpu-only`](configs/profiles/cpu-only.toml) | build/compute server without accelerators | RAM, load and CPU temperature only |
 | [`laptop`](configs/profiles/laptop.toml) | thermally limited machine | early temperature reaction, short cooldown |
@@ -60,7 +60,7 @@ Every threshold is a **fraction of detected capacity** (each card's own power li
 
 | Key | Default | Meaning |
 |---|---|---|
-| `gpu_power_soft_frac` / `_resume_frac` / `_red_frac` | 0.70 / 0.48 / 0.99 | per-card power lines, as a fraction of its limit |
+| `gpu_power_soft_frac` / `_resume_frac` / `_red_frac` | 0.70 / 0.48 / 1.02 | per-card power lines, as a fraction of its limit (the red line only fires if a card exceeds its own limit) |
 | `total_gpu_power_red_frac` | 0.76 | summed draw / summed limits that triggers RED |
 | `calm_total_power_frac` | 0.40 | summed draw must be below this before thawing (a frozen job still holds a card above idle) |
 | `gpu_temp_soft_c` / `_resume_c` / `_red_c` | 80 / 72 / 84 | temperatures in C |
@@ -68,7 +68,7 @@ Every threshold is a **fraction of detected capacity** (each card's own power li
 | `ram_admission_frac` | 0.50 | launcher refuses to start a job if it would push RAM past this |
 | `load_red_per_cpu` | 4.0 | load1 / cores that triggers RED (0 disables) |
 | `interval_s`, `soft_act_gap_s` | 1.0, 3.0 | sampling period and minimum gap between soft actions |
-| `red_cooldown_s`, `red_cooldown_max_s` | 120, 1800 | minimum frozen time; doubles on repeated RED |
+| `red_cooldown_s`, `red_cooldown_max_s`, `red_forgive_s` | 120, 600, 600 | minimum frozen time; doubles on repeated RED up to the cap; calm GREEN this long resets the counter |
 | `calm_samples`, `thaw_spacing_s` | 15, 8 | calm samples needed; seconds between resumed processes |
 | `scope_mode`, `scope_root`, `scope_users` | cwd, ".", [] | which processes may be paused: cwd under a root, owned by users, or all |
 | `include_cmd_regex`, `exclude_cmd_regex` | python/java/ffmpeg/..., guardrails/sshd/claude | command-line filters; interactive shells never match |
@@ -77,6 +77,10 @@ Every threshold is a **fraction of detected capacity** (each card's own power li
 ## Architecture
 
 Probes (read-only) feed a **pure** controller (no I/O, no clock, fully unit-tested); the watcher turns its actions into `SIGSTOP`/`SIGCONT`; a state file is the only contract with the rest of the world. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the diagram, the state machine, the duty-cycle math and the fail-safe rules.
+
+## Field notes
+
+What went wrong in production and how the defaults changed: [docs/LESSONS.md](docs/LESSONS.md).
 
 ## Install the skill for Claude Code
 
@@ -101,7 +105,7 @@ Then ask your agent to "run these jobs safely" or "save the server": it will che
 ## Develop
 
 ```bash
-pip install -e '.[test]' && pytest        # 19 tests: state machine, config validation, slots, state-file freshness
+pip install -e '.[test]' && pytest        # 22 tests: state machine, config validation, slots, state-file freshness
 ```
 
 ## License

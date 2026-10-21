@@ -16,7 +16,7 @@ class Config:
     # --- accelerator power (fraction of each device's own power limit) ---
     gpu_power_soft_frac: float = 0.70       # above this: pause the youngest job on that device
     gpu_power_resume_frac: float = 0.48     # below this: resume one paused job
-    gpu_power_red_frac: float = 0.99        # above this on any device: RED (freeze everything)
+    gpu_power_red_frac: float = 1.02        # per-card RED only if a card exceeds its own limit; single jobs near the cap are normal (soft cap handles them)
     total_gpu_power_red_frac: float = 0.76  # summed draw / summed limits above this: RED
     calm_total_power_frac: float = 0.40     # summed draw must fall below this before thawing
     # --- temperatures (deg C) ---
@@ -35,7 +35,8 @@ class Config:
     interval_s: float = 1.0
     soft_act_gap_s: float = 3.0
     red_cooldown_s: float = 120.0           # minimum frozen time; doubles on repeated RED, capped below
-    red_cooldown_max_s: float = 1800.0
+    red_cooldown_max_s: float = 600.0       # cap: a 16-minute freeze cost more than the alarm saved
+    red_forgive_s: float = 600.0            # a calm GREEN this long resets the escalation counter
     calm_samples: int = 15                  # consecutive calm samples required before thawing
     thaw_spacing_s: float = 8.0             # staggered resume: one process per spacing (avoids inrush)
     # --- which processes the guard may pause ---

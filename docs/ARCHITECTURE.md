@@ -42,12 +42,12 @@ stateDiagram-v2
 | Level | Trigger (defaults) | Action |
 |---|---|---|
 | Soft | device power > 70% of its limit, temp >= 80 C, RAM > 50% | pause the **youngest** job on that device (old jobs finish first); resume below 48% / 72 C / 42% |
-| RED | any device pegged > 99% of limit (a single job can legitimately spike to ~97%; the soft cap handles that), (multi-device only) summed power > 76% of summed limits, temp >= 84 C, RAM > 56%, load > 4 per core | freeze **every** in-scope process |
+| RED | a card above its own limit (single jobs near the cap are normal; the soft cap handles them), (multi-device only) summed power > 76% of summed limits, temp >= 84 C, RAM > 56%, load > 4 per core | freeze **every** in-scope process |
 | THAW | calm (temps < resume mark, summed power < 40% of capacity, RAM < resume) for 15 samples after the cooldown | resume oldest first, one per 8 s (staggered, no inrush spike) |
 
 **Duty cycling is the power cap.** Without root you cannot lower a GPU's hardware power limit, so the soft cap pauses and resumes a job in short bursts. If a job draws `P_on` while running and `P_idle` while stopped, a duty cycle `d` gives an average of `d*P_on + (1-d)*P_idle`; choose `d` so the average stays under the cap. If you *can* set a hardware limit (`nvidia-smi -pl`), do that too: it reacts in microseconds, the software cap in seconds.
 
-**Why the RED cooldown doubles.** A RED that recurs right after a thaw means the load itself is too high, not a transient. Doubling (default 120 s, cap 30 min) stops the guard from oscillating; 30 quiet minutes in GREEN reset the counter.
+**Why the RED cooldown doubles.** A RED that recurs right after a thaw means the load itself is too high, not a transient. Doubling (default 120 s, cap 10 min) stops the guard from oscillating; `red_forgive_s` of calm GREEN resets the counter.
 
 ## Scope: which processes may be paused
 

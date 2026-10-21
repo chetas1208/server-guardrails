@@ -15,7 +15,7 @@ def test_default_config_is_valid_and_ordered():
 
 def test_unordered_thresholds_are_rejected(tmp_path):
     p = tmp_path / "bad.json"
-    p.write_text(json.dumps({"gpu_power_soft_frac": 0.99}))
+    p.write_text(json.dumps({"gpu_power_soft_frac": 1.05}))
     with pytest.raises(ValueError):
         load_config(str(p))
 

@@ -36,5 +36,12 @@ It queues for a slot (one job per GPU, N CPU jobs), waits for GREEN and RAM head
 ## 5. Report
 Say which profile is active, the current state, the number of RED events and pauses (`events.jsonl`), and any job that never ran. Do not claim the server is "safe" beyond what the watcher measured; software caps cannot stop spikes shorter than the sample interval.
 
+## 6. Operating lessons (learned in production, see docs/LESSONS.md)
+- One heavy job can legitimately touch 95-99% of a card's power limit: that is the soft cap's job. Do not treat it as an emergency, and do not set a per-card RED line near the limit.
+- RED is for summed power, temperature, RAM and load. If RED repeats, look at the load itself (too many jobs), not the thresholds.
+- After changing thresholds, restart BOTH the watcher and its supervisor. Keep thresholds in the config file, not on a command line.
+- A frozen GPU job still holds the card above idle power: do not wait for near-zero power before thawing.
+- Check `guardrails status` and the events log before blaming a job that "hangs": it may simply be paused.
+
 ## Safety rules
 Pausing only affects processes in the configured scope. Never widen the scope to other users' processes without explicit permission. Never send signals other than SIGSTOP/SIGCONT.

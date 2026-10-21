@@ -1,8 +1,8 @@
 # A VM whose host you do not control: be conservative, long cooldowns, small slots.
 gpu_power_soft_frac = 0.65
 gpu_power_resume_frac = 0.45
-gpu_power_red_frac = 0.97
-total_gpu_power_red_frac = 0.70
+gpu_power_red_frac = 1.02
+total_gpu_power_red_frac = 1.02
 ram_soft_frac = 0.55
 ram_resume_frac = 0.45
 ram_red_frac = 0.65
