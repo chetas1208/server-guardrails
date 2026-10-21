@@ -36,5 +36,15 @@ An abrupt power-off left hundreds of zero-byte files (data written, not flushed)
 **What happened.** When the per-card RED line was raised to 1.02 (lesson 1), the same value was also written to `total_gpu_power_red_frac` in the `gpu-workstation`, `multi-gpu-server` and `shared-cloud-vm` profiles. A summed draw can never exceed ~100% of summed limits, so the summed RED rule was silently off in exactly the profiles meant for GPU boxes, while their comments promised 76%.
 **Fix.** `gpu-workstation` back to 0.76 (the logged 675 W event is 80% of 840 W; the 2026-10-20 power-off was at 734-786 W, 87-94%); `multi-gpu-server` and `shared-cloud-vm` 0.70 (a deliberately tighter choice, not validated on hardware: UNVERIFIED). Regression test `test_gpu_profiles_keep_a_real_summed_power_red_line`.
 
-## 10. 2026-10-21 (interim): for predicting overload, the current summed power is hard to beat
-Replay of the production power log (1,917 rows, label = summed draw exceeds 500 W within 15 s; leave-one-block-out over 6 blocks, blocks 0-2 before the guard, 3-5 guarded; only 15, 31 and 53 positives in the guarded blocks). AUC on the guarded blocks: persistence (current summed power) 0.796, slope rule 0.666, 6-feature logistic regression 0.641. Pooled AUC (dominated by the pre-guard blocks) was 0.955 [0.926, 0.974] / 0.864 [0.819, 0.904] / 0.961 [0.920, 0.983]. Reading: the two cleverer predictors did not generalize to the guarded regime; the plain threshold on current power did. Guarded-block CIs were not computed and the positives are few, so treat as indicative only. A text-model arm was not part of this run (`--no-laya`); no verdict on it yet.
+## 10. 2026-10-21: a language model as overload predictor lost to "current summed power" (rules beat the model here)
+Replay of the production power log (1,931 rows, label = summed draw exceeds 500 W within 15 s; leave-one-block-out over 6 blocks, blocks 0-2 before the guard, 3-5 guarded with only 15, 31 and 53 positives). A local open-weights text decision model (CPU, zero-shot on a JSON state of the current sample; 2,230 s to score the log) was compared with three simple predictors:
+
+| Predictor | Pooled AUC [95% CI] | Guarded-blocks AUC | Recall at 5% FPR |
+|---|---|---|---|
+| persistence (current summed power) | 0.955 [0.924, 0.974] | 0.788 | 0.85 |
+| slope rule | 0.863 [0.819, 0.902] | 0.664 | 0.68 |
+| logistic regression, 6 features | 0.960 [0.916, 0.985] | 0.621 | 0.91 |
+| text model, zero-shot | 0.924 [0.871, 0.957] | 0.749 | 0.68 |
+| text model + LR recalibration | 0.923 [0.867, 0.958] | 0.749 | 0.66 |
+
+The text model is below the best simple baseline on the pooled score (CIs overlap, difference not shown to exist) and on the guarded blocks (0.749 vs 0.788; no CI computed there, positives are few). It does not beat the baseline by any margin that would justify an advisor, so none is built. The slope rule and the logistic model also failed to generalize to the guarded regime. Reading: a threshold on current summed power is the predictor to beat, and the guard already is one. Caveats: one machine, one 15 s horizon and 500 W label, tiny guarded positive counts, zero-shot prompt only; the label is nearly a function of the current power, which favors persistence.
