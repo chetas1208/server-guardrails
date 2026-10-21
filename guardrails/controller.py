@@ -62,6 +62,7 @@ class Controller:
         self._over = {}
         self._under = {}
         self._last_act: dict = {}
+        self._last_resume = -1e9
 
     # -- helpers -------------------------------------------------------------------------------------------------
     def red_reasons(self, s: Sample) -> list[str]:
@@ -93,6 +94,20 @@ class Controller:
 
     def _gap_ok(self, key, now) -> bool:
         return now - self._last_act.get(key, -1e9) >= self.cfg.soft_act_gap_s
+
+    def _resume_ok(self, s: Sample, d: Device, h: dict, now: float) -> bool:
+        """A paused GPU job idles near ~125 W (its context stays resident), so 'below the resume mark' is always true
+        while it is paused. Gate the resume on (a) a spacing between resumes of different devices and (b) the PROJECTED
+        summed draw if the job returned to the power it had when paused, so two cards cannot spike together into RED."""
+        c = self.cfg
+        if now - self._last_resume < c.soft_resume_spacing_s:
+            return False
+        cap = sum(x.limit_w for x in s.devices)
+        if len(s.devices) > 1 and cap > 0:
+            projected = sum(x.power_w for x in s.devices) - d.power_w + h.get("peak_w", d.power_w)
+            if projected > c.total_gpu_power_resume_frac * cap:
+                return False
+        return True
 
     # -- main step -----------------------------------------------------------------------------------------------
     def step(self, s: Sample, procs: list, now: float) -> list:
@@ -145,16 +160,17 @@ class Controller:
                 cand = [p for p in running if p.device == d.id]
                 if cand:
                     v = max(cand, key=lambda p: p.start)
-                    self.held[v.pid] = {"reason": f"dev{d.id}", "start": v.start, "device": d.id}
+                    self.held[v.pid] = {"reason": f"dev{d.id}", "start": v.start, "device": d.id, "peak_w": d.power_w}
                     running = [p for p in running if p.pid != v.pid]
                     self._last_act[("dev", d.id)] = now
                     acts.append(Action("PAUSE", v.pid, f"gpu{d.id} {d.power_w:.0f}W/{d.temp_c:.0f}C over soft cap"))
             elif self._under[d.id] >= 2 and self._gap_ok(("dev", d.id), now):
                 mine = [pid for pid, h in self.held.items() if h["reason"] == f"dev{d.id}"]
-                if mine:
+                if mine and self._resume_ok(s, d, self.held[min(mine, key=lambda k: self.held[k]["start"])], now):
                     pid = min(mine, key=lambda k: self.held[k]["start"])
                     self.held.pop(pid)
                     self._last_act[("dev", d.id)] = now
+                    self._last_resume = now
                     acts.append(Action("RESUME", pid, f"gpu{d.id} below resume mark"))
 
         # soft RAM cap

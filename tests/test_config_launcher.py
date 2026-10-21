@@ -62,3 +62,12 @@ def test_state_file_roundtrip_and_stale_means_dead(tmp_path):
     old = os.path.getmtime(cfg.state_path) - 3600
     os.utime(cfg.state_path, (old, old))
     assert read_state(cfg)[0] == "DEAD"          # stale file => watcher died => launcher must block
+
+
+def test_gpu_profiles_keep_a_real_summed_power_red_line():
+    """Regression: three profiles once shipped total_gpu_power_red_frac = 1.02, silently disabling the summed RED rule."""
+    from pathlib import Path
+    for name in ("gpu-workstation", "multi-gpu-server", "shared-cloud-vm"):
+        c = load_config(str(Path(__file__).parent.parent / "configs" / "profiles" / f"{name}.toml"))
+        assert c.total_gpu_power_red_frac <= 0.80, name
+        assert c.total_gpu_power_resume_frac < c.total_gpu_power_red_frac, name

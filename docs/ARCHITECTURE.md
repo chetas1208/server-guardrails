@@ -32,7 +32,7 @@ flowchart LR
 ```mermaid
 stateDiagram-v2
     [*] --> GREEN
-    GREEN --> GREEN: soft cap exceeded -> PAUSE youngest job on that device<br/>below resume mark -> RESUME one
+    GREEN --> GREEN: soft cap exceeded -> PAUSE youngest job on that device<br/>below resume mark AND projected summed power OK -> RESUME one
     GREEN --> RED: any red condition
     RED --> THAW: cooldown elapsed AND calm for N consecutive samples
     THAW --> GREEN: all held processes resumed (one every thaw_spacing_s)
@@ -46,6 +46,8 @@ stateDiagram-v2
 | THAW | calm (temps < resume mark, summed power < 40% of capacity, RAM < resume) for 15 samples after the cooldown | resume oldest first, one per 8 s (staggered, no inrush spike) |
 
 **Duty cycling is the power cap.** Without root you cannot lower a GPU's hardware power limit, so the soft cap pauses and resumes a job in short bursts. If a job draws `P_on` while running and `P_idle` while stopped, a duty cycle `d` gives an average of `d*P_on + (1-d)*P_idle`; choose `d` so the average stays under the cap. If you *can* set a hardware limit (`nvidia-smi -pl`), do that too: it reacts in microseconds, the software cap in seconds.
+
+**Resume is gated, not just timed.** A paused GPU job idles near 125 W, so "power is below the resume mark" is true almost immediately after every pause. Left alone, the soft cap chattered (pause, resume 3 s later, pause) and two cards ramping together reached the summed RED line. A resume now needs (a) `soft_resume_spacing_s` since the last resume on any device and (b), with 2+ devices, a projected summed draw (current total, minus this card's idle draw, plus the power it had when paused) below `total_gpu_power_resume_frac`.
 
 **Why the RED cooldown doubles.** A RED that recurs right after a thaw means the load itself is too high, not a transient. Doubling (default 120 s, cap 10 min) stops the guard from oscillating; `red_forgive_s` of calm GREEN resets the counter.
 

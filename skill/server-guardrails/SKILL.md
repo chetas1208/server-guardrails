@@ -41,6 +41,9 @@ Say which profile is active, the current state, the number of RED events and pau
 - RED is for summed power, temperature, RAM and load. If RED repeats, look at the load itself (too many jobs), not the thresholds.
 - After changing thresholds, restart BOTH the watcher and its supervisor. Keep thresholds in the config file, not on a command line.
 - A frozen GPU job still holds the card above idle power: do not wait for near-zero power before thawing.
+- A paused GPU job still idles near 125 W, so it looks "calm" right after every pause: resumes are spaced (`soft_resume_spacing_s`) and gated on the projected summed power. If you see pause/resume every few seconds, raise the spacing rather than the soft cap.
+- Keep the summed RED line real (0.70-0.76 of summed limits on GPU boxes); a value >= 1 silently disables it. Check profiles after bulk edits.
+- For overload prediction a plain threshold on current summed power beat slope and logistic predictors on the guarded period (docs/LESSONS.md #10, indicative only): prefer simple rules over models.
 - Check `guardrails status` and the events log before blaming a job that "hangs": it may simply be paused.
 
 ## Safety rules

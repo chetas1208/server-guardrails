@@ -126,3 +126,41 @@ def test_escalation_is_forgiven_after_calm():
     assert c.mode == GREEN
     c.step(smp(), [], 200)  # calm GREEN for > red_forgive_s
     assert c.red_count == 0
+
+
+def _pause_both(c, t=0):
+    """Both cards over the soft cap: one job paused on each device."""
+    acts = c.step(smp(p0=300, p1=300), procs(), t)
+    assert {a.kind for a in acts} == {"PAUSE"} and len(c.held) == 2
+
+
+def test_resume_is_spaced_across_devices():
+    """Logged 2026-10-21: both paused jobs were resumed 1 s apart, ramped together and summed to 675 W (RED)."""
+    c = Controller(Config(soft_act_gap_s=1))
+    _pause_both(c)
+    left = [Proc(10, 1.0, 2.0, 0), Proc(11, 2.0, 2.0, 0)]
+    idle = smp(p0=125, p1=125)                      # paused jobs idle near 125 W
+    kinds = []
+    for t in range(1, 8):
+        kinds += [(t, a.kind) for a in c.step(idle, left, t)]
+    assert [k for _, k in kinds] == ["RESUME"]       # only one resume within soft_resume_spacing_s (8 s)
+    assert [a.kind for a in c.step(idle, left, 10)] == ["RESUME"]   # the other one follows after the spacing
+
+
+def test_resume_blocked_when_projected_total_would_reach_red_zone():
+    c = Controller(Config(soft_act_gap_s=1, soft_resume_spacing_s=0))
+    c.step(smp(p0=392, p1=392), procs(), 0)         # pause one job per device at ~392 W each
+    c.held[10] = {"reason": "dev0", "start": 1.0, "device": 0, "peak_w": 392}
+    c.held[20] = {"reason": "dev1", "start": 3.0, "device": 1, "peak_w": 392}
+    # projected summed draw if dev0's job returns: 125 + 125 - 125 + 392 = 517 < 0.68 * 840 = 571 -> allowed
+    # but with dev1 already ramped to 330 W: 125 + 330 - 125 + 392 = 722 -> blocked
+    acts = c.step(smp(p0=125, p1=330), [], 5)
+    assert [a for a in acts if a.kind == "RESUME"] == []
+
+
+def test_resume_gate_does_not_apply_to_a_single_device():
+    c = Controller(Config(soft_act_gap_s=1))
+    s1 = lambda p: Sample([Device(0, p, 420, 50)], 10, 125, 1, 20)
+    c.step(s1(392), [Proc(10, 1.0, 2.0, 0)], 0)
+    c.step(s1(125), [], 2)
+    assert [a.kind for a in c.step(s1(125), [], 4)] == ["RESUME"]

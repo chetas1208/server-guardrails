@@ -62,6 +62,7 @@ Every threshold is a **fraction of detected capacity** (each card's own power li
 |---|---|---|
 | `gpu_power_soft_frac` / `_resume_frac` / `_red_frac` | 0.70 / 0.48 / 1.02 | per-card power lines, as a fraction of its limit (the red line only fires if a card exceeds its own limit) |
 | `total_gpu_power_red_frac` | 0.76 | summed draw / summed limits that triggers RED |
+| `total_gpu_power_resume_frac`, `soft_resume_spacing_s` | 0.68, 8 | a soft RESUME is allowed only if the projected summed draw (job back at its pre-pause power) stays below this, and at most one resume per spacing across devices |
 | `calm_total_power_frac` | 0.40 | summed draw must be below this before thawing (a frozen job still holds a card above idle) |
 | `gpu_temp_soft_c` / `_resume_c` / `_red_c` | 80 / 72 / 84 | temperatures in C |
 | `ram_soft_frac` / `_resume_frac` / `_red_frac` | 0.50 / 0.42 / 0.56 | fractions of total RAM |

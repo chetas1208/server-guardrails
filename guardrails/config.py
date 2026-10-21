@@ -18,6 +18,7 @@ class Config:
     gpu_power_resume_frac: float = 0.48     # below this: resume one paused job
     gpu_power_red_frac: float = 1.02        # per-card RED only if a card exceeds its own limit; single jobs near the cap are normal (soft cap handles them)
     total_gpu_power_red_frac: float = 0.76  # summed draw / summed limits above this: RED
+    total_gpu_power_resume_frac: float = 0.68  # soft RESUME only if projected summed draw (job back at its pre-pause power) stays below this
     calm_total_power_frac: float = 0.40     # summed draw must fall below this before thawing
     # --- temperatures (deg C) ---
     gpu_temp_soft_c: float = 80.0
@@ -34,6 +35,7 @@ class Config:
     # --- timing ---
     interval_s: float = 1.0
     soft_act_gap_s: float = 3.0
+    soft_resume_spacing_s: float = 8.0      # minimum gap between soft RESUMEs on any device (two cards must not ramp together)
     red_cooldown_s: float = 120.0           # minimum frozen time; doubles on repeated RED, capped below
     red_cooldown_max_s: float = 600.0       # cap: a 16-minute freeze cost more than the alarm saved
     red_forgive_s: float = 600.0            # a calm GREEN this long resets the escalation counter
@@ -88,6 +90,7 @@ def validate(c: Config) -> None:
         (c.gpu_power_resume_frac < c.gpu_power_soft_frac < c.gpu_power_red_frac, "gpu power: need resume < soft < red"),
         (c.gpu_temp_resume_c < c.gpu_temp_soft_c < c.gpu_temp_red_c, "gpu temp: need resume < soft < red"),
         (c.ram_resume_frac < c.ram_soft_frac < c.ram_red_frac <= 1.0, "ram: need resume < soft < red <= 1"),
+        (c.total_gpu_power_resume_frac < c.total_gpu_power_red_frac, "total gpu power: need resume < red"),
         (0 < c.interval_s <= 30, "interval_s must be in (0, 30]"),
         (c.scope_mode in ("cwd", "user", "all"), "scope_mode must be cwd|user|all"),
     ]

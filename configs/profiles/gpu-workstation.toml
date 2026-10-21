@@ -1,8 +1,7 @@
-# 1-4 GPUs, one shared workstation / lab box. Soft cap 70% of each card's power limit, RED at 95% or 76% of the summed limits.
+# 1-4 GPUs, one shared workstation / lab box. Soft cap 70% of each card's power limit; RED on the summed draw above 76% of the summed limits (a single card only trips RED above its own limit).
 gpu_power_soft_frac = 0.70
 gpu_power_resume_frac = 0.48
-gpu_power_red_frac = 1.02
-total_gpu_power_red_frac = 1.02
+total_gpu_power_red_frac = 0.76
 ram_soft_frac = 0.50
 ram_resume_frac = 0.42
 ram_red_frac = 0.56
