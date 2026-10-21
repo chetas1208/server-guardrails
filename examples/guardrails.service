@@ -1,0 +1,18 @@
+[Unit]
+Description=server-guardrails watcher (soft caps, RED freeze, staggered thaw)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/server-guardrails
+ExecStart=/usr/bin/python3 -m guardrails -c /etc/guardrails/profile.toml watch
+Restart=always
+RestartSec=3
+# A watcher that is stopped thaws everything it froze (SIGTERM handler), so stopping the unit is always safe.
+KillSignal=SIGTERM
+TimeoutStopSec=20
+# The watcher needs permission to signal the jobs it guards: run it as the jobs' user, or as root for other users' jobs.
+User=jobs
+
+[Install]
+WantedBy=multi-user.target

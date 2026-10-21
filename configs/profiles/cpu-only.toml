@@ -1,0 +1,10 @@
+# No accelerator: guard RAM and CPU pressure only (devices list is empty, so GPU thresholds are inert).
+ram_soft_frac = 0.60
+ram_resume_frac = 0.50
+ram_red_frac = 0.75
+load_red_per_cpu = 3.0
+cpu_temp_red_c = 92.0
+scope_mode = "user"
+scope_users = ["builder"]
+cpu_slots = 8
+threads_per_job = 2

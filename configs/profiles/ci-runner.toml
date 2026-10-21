@@ -1,0 +1,11 @@
+# Build/CI box with many short jobs: no GPU assumptions, strict RAM, many slots, quick recovery.
+ram_soft_frac = 0.70
+ram_resume_frac = 0.60
+ram_red_frac = 0.85
+load_red_per_cpu = 5.0
+scope_mode = "all"
+cpu_slots = 12
+threads_per_job = 2
+red_cooldown_s = 30.0
+calm_samples = 5
+thaw_spacing_s = 2.0

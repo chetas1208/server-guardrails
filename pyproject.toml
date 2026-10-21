@@ -1,0 +1,20 @@
+[project]
+name = "server-guardrails"
+version = "0.1.0"
+description = "Soft power/RAM caps, red-alert freeze and staggered thaw for shared GPU/CPU servers. Standard library only."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.9"
+dependencies = []
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[project.scripts]
+guardrails = "guardrails.cli:main"
+
+[tool.setuptools]
+packages = ["guardrails"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
