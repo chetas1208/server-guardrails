@@ -164,3 +164,15 @@ def test_resume_gate_does_not_apply_to_a_single_device():
     c.step(s1(392), [Proc(10, 1.0, 2.0, 0)], 0)
     c.step(s1(125), [], 2)
     assert [a.kind for a in c.step(s1(125), [], 4)] == ["RESUME"]
+
+
+def test_replay_logged_samples_never_resume_two_devices_within_spacing():
+    """Replay of the per-second powers logged just before a 728 W RED (2026-10-21): the old rule resumed card 0 at t=4 and
+    card 1 at t=5. The samples are replayed open loop, so this checks the resume spacing, not the physics."""
+    seq = [(0, 377.9, 243.1), (2, 195.6, 399.3), (3, 130.1, 174.3), (4, 125.0, 145.3), (5, 366.6, 139.0),
+           (6, 341.4, 386.5), (7, 168.6, 188.1), (8, 129.2, 147.0), (9, 124.6, 139.1), (10, 120.2, 132.2)]
+    live = [Proc(10, 1.0, 2.0, 0), Proc(20, 2.0, 2.0, 1)]
+    c, resumes = Controller(Config(soft_act_gap_s=1)), []
+    for t, p0, p1 in seq:
+        resumes += [t for a in c.step(smp(p0=p0, p1=p1), [p for p in live if p.pid not in c.held], t) if a.kind == "RESUME"]
+    assert len(resumes) <= 1 or all(b - a >= 8 for a, b in zip(resumes, resumes[1:])), resumes
