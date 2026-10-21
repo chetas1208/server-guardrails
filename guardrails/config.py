@@ -16,7 +16,7 @@ class Config:
     # --- accelerator power (fraction of each device's own power limit) ---
     gpu_power_soft_frac: float = 0.70       # above this: pause the youngest job on that device
     gpu_power_resume_frac: float = 0.48     # below this: resume one paused job
-    gpu_power_red_frac: float = 0.95        # above this on any device: RED (freeze everything)
+    gpu_power_red_frac: float = 0.99        # above this on any device: RED (freeze everything)
     total_gpu_power_red_frac: float = 0.76  # summed draw / summed limits above this: RED
     calm_total_power_frac: float = 0.40     # summed draw must fall below this before thawing
     # --- temperatures (deg C) ---

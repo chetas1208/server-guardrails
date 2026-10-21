@@ -19,7 +19,7 @@ A 2-GPU workstation running ~20 parallel agents hit a 786 W summed GPU draw, 44 
 |---|---|
 | **Watcher** (`guardrails watch`) | Samples GPUs, RAM, load and temperature every second and runs a tested state machine. |
 | **Soft caps** | Above 70% of a card's power limit (or 80 C, or 50% RAM) the *youngest* job on that device is paused; below the resume mark it continues. Duty-cycling keeps the average under the cap without root. |
-| **Red alert** | Any card above 95% of its limit, summed power above 76% of summed limits, 84 C, RAM above 56% or load above 4 per core freezes every in-scope process. |
+| **Red alert** | Any card pegged above 99% of its limit, summed power above 76% of summed limits, 84 C, RAM above 56% or load above 4 per core freezes every in-scope process. |
 | **Staggered thaw** | After a cooldown and a calm period, processes resume oldest first, one every 8 s, so restarting never recreates the spike. Repeated alerts double the cooldown. |
 | **Launcher** (`guardrails run`) | Admission control: one job per GPU, N CPU jobs, RAM headroom check, pinned thread counts, lower priority, and it waits while the watcher is not GREEN. |
 | **State file** | `GREEN/RED/THAW <time>`; any scheduler can read it as back-pressure. A stale file means the watcher is dead. |
@@ -47,7 +47,7 @@ Replay a recorded trace without touching anything: `guardrails -c my.toml simula
 
 | Profile | For | Highlights |
 |---|---|---|
-| [`gpu-workstation`](configs/profiles/gpu-workstation.toml) | 1-4 GPUs, shared lab box | 70% soft cap, RED at 95% / 76% total, 1 job per GPU, 4 CPU jobs |
+| [`gpu-workstation`](configs/profiles/gpu-workstation.toml) | 1-4 GPUs, shared lab box | 70% soft cap, RED at 99% / 76% total, 1 job per GPU, 4 CPU jobs |
 | [`multi-gpu-server`](configs/profiles/multi-gpu-server.toml) | 8-GPU training node | 2 jobs per GPU, 80% total-power line, 16 CPU slots |
 | [`cpu-only`](configs/profiles/cpu-only.toml) | build/compute server without accelerators | RAM, load and CPU temperature only |
 | [`laptop`](configs/profiles/laptop.toml) | thermally limited machine | early temperature reaction, short cooldown |
@@ -60,7 +60,7 @@ Every threshold is a **fraction of detected capacity** (each card's own power li
 
 | Key | Default | Meaning |
 |---|---|---|
-| `gpu_power_soft_frac` / `_resume_frac` / `_red_frac` | 0.70 / 0.48 / 0.95 | per-card power lines, as a fraction of its limit |
+| `gpu_power_soft_frac` / `_resume_frac` / `_red_frac` | 0.70 / 0.48 / 0.99 | per-card power lines, as a fraction of its limit |
 | `total_gpu_power_red_frac` | 0.76 | summed draw / summed limits that triggers RED |
 | `calm_total_power_frac` | 0.40 | summed draw must be below this before thawing (a frozen job still holds a card above idle) |
 | `gpu_temp_soft_c` / `_resume_c` / `_red_c` | 80 / 72 / 84 | temperatures in C |

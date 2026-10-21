@@ -18,7 +18,7 @@ All logging stopped at 07:22:48 and the machine stayed down for hours. The boot 
 
 **Lessons that shaped the defaults**
 1. Log-only monitoring did not help: nothing acted on the numbers. Enforcement has to be automatic.
-2. A single heavy job alone can reach 380-410 W on a 420 W card, so a per-card RED line near the limit (95%) trips on single jobs; the soft cap, not RED, must handle one job.
+2. A single heavy job alone can reach 380-410 W on a 420 W card, so a per-card RED line below ~99% trips on single jobs that are within spec; the soft cap, not RED, must handle one job (RED is for the summed draw and temperature).
 3. A *frozen* GPU job still holds the card at ~125 W (context resident), so the "calm" test after a freeze cannot demand near-zero power. The default is 40% of summed capacity.
 4. Thawing everything at once recreates the spike that caused the freeze; resume one process at a time.
 5. Kill-free control matters: every job here was resumable, so pausing cost time but no work.
